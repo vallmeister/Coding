@@ -1,5 +1,7 @@
 package Coding.codeJam.cj21;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 public class ClosestPick {
@@ -12,80 +14,76 @@ public class ClosestPick {
       int n = scanner.nextInt();
       int k = scanner.nextInt();
 
+      int size = k;
+
       List<Integer> purchasedTickets = new ArrayList<>(n);
       for (int i = 0; i < n; i++) {
-        purchasedTickets.add(scanner.nextInt());
+        int number = scanner.nextInt();
+        if (!purchasedTickets.contains(number)) {
+          purchasedTickets.add(number);
+          size--;
+        }
       }
       Collections.sort(purchasedTickets);
 
-      double chance;
-      if (allTicketsSold(k, purchasedTickets)) {
-        chance = 0;
+      BigDecimal chance;
+      if (size == 0) {
+        chance = BigDecimal.ZERO;
+      } else  if (size == 1 || size == 2){
+        chance = BigDecimal.valueOf(size);
+        chance = chance.divide(BigDecimal.valueOf(k), 6, RoundingMode.HALF_DOWN);
+      } else if (n == 0) {
+        chance = BigDecimal.ONE;
       } else {
         chance = solve(k, purchasedTickets);
       }
 
-      System.out.format("Case #%d: %f\n", test, chance);
+      System.out.format("Case #%d: %s\n", test, chance.toString());
     }
   }
 
-  private static boolean allTicketsSold(int k, List<Integer> tickets) {
-    for (int i = 1; i <= k; i++) {
-      if (!tickets.contains(i)) {
-        return false;
+  private static BigDecimal solve(int k, List<Integer> purchased) {
+    purchased.add(k + 1);
+    int lowerBound;
+    int upperBound = 0;
+    int biggestSize = 0;
+    int bestValue = 0;
+    int secondValue = 0;
+    int counter = 0;
+
+    while (!purchased.isEmpty()) {
+      lowerBound = upperBound + 1;
+      upperBound = purchased.remove(0);
+      int value = intervalValue(k, lowerBound, upperBound);
+      int size = upperBound - lowerBound;
+
+      if (value > 0){
+        biggestSize = Math.max(biggestSize, size);
+        counter++;
+        if (value > bestValue) {
+          secondValue = bestValue;
+          bestValue = value;
+        } else if (value > secondValue) {
+          secondValue = value;
+        }
       }
     }
-    return true;
-  }
-
-  private static double solve(int k, List<Integer> tickets) {
-    double reachableNumbers = 0d;
-    List<Interval> intervals = new ArrayList<>();
-    int first = tickets.get(0);
-    int last = tickets.get(tickets.size() - 1);
-    if (first > 1) {
-      intervals.add(new Interval(true, first, 0));
-    }
-    if (last < k) {
-      intervals.add(new Interval(true, k+1, last));
+    if (counter == 0) return BigDecimal.ZERO;
+    if (counter == 1){
+      BigDecimal result = new BigDecimal(biggestSize);
+      return result.divide(BigDecimal.valueOf(k), 6, RoundingMode.HALF_DOWN);
     }
 
-    for (int i = 0; i < tickets.size() - 1; i++) {
-      int lowerBound = tickets.get(i);
-      int upperBound = tickets.get(i + 1);
-      intervals.add(new Interval(false, upperBound, lowerBound));
-    }
-    Collections.sort(intervals);
-    int index = intervals.size() - 1;
-    reachableNumbers = reachableNumbers + intervals.get(index).size() + intervals.get(index - 1).size();
+    BigDecimal result = BigDecimal.valueOf(Math.max(biggestSize, bestValue + secondValue));
 
-    return reachableNumbers / k;
-  }
-}
+    result = result.divide(BigDecimal.valueOf(k), 6, RoundingMode.HALF_DOWN);
 
-class Interval implements Comparable<Interval>{
-  boolean edge;
-  int upperBound;
-  int lowerBound;
-
-  Interval(boolean edge, int upper, int lower) {
-    this.edge = edge;
-    upperBound = upper;
-    lowerBound = lower;
+    return result;
   }
 
-  int size() {
-    if (edge) return upperBound - lowerBound - 1;
-    else {
-      return (upperBound - lowerBound) / 2;
-    }
-  }
-
-
-  @Override
-  public int compareTo(Interval interval) {
-    if (size() < interval.size()) return  -1;
-    if (size() > interval.size()) return 1;
-    return 0;
+  private static int intervalValue(int k, int lowerBound, int upperBound) {
+    if (lowerBound == 1 || upperBound > k) return upperBound - lowerBound;
+    if (upperBound - lowerBound <= 0) return 0;
+    else return (upperBound - lowerBound + 1) / 2;
   }
 }
